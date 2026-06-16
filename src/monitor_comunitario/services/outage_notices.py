@@ -36,8 +36,7 @@ def persist_parsed_notice(
 ) -> tuple[OutageNotice, bool]:
     """Persist one parsed notice.
 
-    Returns a tuple `(notice, created)` where `created` is false when an
-    identical notice already exists.
+    Returns `(notice, created)`.
     """
     content_hash = build_notice_content_hash(parsed_notice, source_url)
     existing = get_notice_by_hash(session, content_hash)

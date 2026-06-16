@@ -45,3 +45,18 @@ Terceira fatia funcional:
 ### Observação
 
 Esta etapa corrige a premissa do scraper: os avisos reais dependem da seleção de município ativo. A persistência dos avisos deve vir depois da análise dos snapshots por município.
+
+## 2026-06-16 — feat(outage-notice-persistence)
+
+Quarta fatia funcional:
+
+- expande o parser para usar fallback de município vindo do seletor;
+- adiciona hash de conteúdo para deduplicação;
+- adiciona serviço de persistência de avisos;
+- adiciona endpoint `GET /outage-notices`;
+- conecta `run-once` ao fluxo selecionar municípios → capturar → parsear → persistir;
+- adiciona testes de parser e persistência.
+
+### Observação
+
+Se a captura por município não trouxer blocos detalhados, o parser retorna zero avisos. O pipeline, porém, fica pronto para persistir assim que o texto capturado expuser dados estruturáveis.

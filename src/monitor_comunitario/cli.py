@@ -5,11 +5,17 @@ import typer
 from rich.console import Console
 
 from monitor_comunitario.core.config import get_settings
+from monitor_comunitario.db.init_db import init_db
+from monitor_comunitario.db.session import SessionLocal
 from monitor_comunitario.scraper.celesc_page import (
     fetch_celesc_municipality_pages,
     fetch_celesc_page,
 )
-from monitor_comunitario.scraper.parser import extract_relevant_outage_section
+from monitor_comunitario.scraper.parser import (
+    extract_relevant_outage_section,
+    parse_outage_notices_from_text,
+)
+from monitor_comunitario.services.outage_notices import persist_parsed_notices
 
 app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
 console = Console()
@@ -95,14 +101,52 @@ def scrape_municipalities(
 
 
 @app.command()
-def run_once() -> None:
-    """Run one monitoring cycle.
+def run_once(
+    limit: int = typer.Option(
+        0,
+        "--limit",
+        help="Maximum number of municipalities to process. Use 0 for all.",
+    ),
+) -> None:
+    """Run one monitoring cycle and persist parsed outage notices."""
+    settings = get_settings()
+    max_options = limit if limit > 0 else None
+    init_db()
 
-    This command is intentionally a placeholder in the bootstrap package.
-    The implementation will call the monitoring service after parser,
-    database matching and notification providers are implemented.
-    """
-    console.print("[yellow]run-once ainda será implementado na fase de worker.[/yellow]")
+    result = asyncio.run(
+        fetch_celesc_municipality_pages(
+            url=settings.celesc_outages_url,
+            snapshot_dir=settings.snapshot_dir,
+            headless=settings.scraper_headless,
+            timeout_ms=settings.scraper_timeout_ms,
+            max_options=max_options,
+        )
+    )
+
+    parsed_notices = []
+
+    for capture in result.captures:
+        parsed_notices.extend(
+            parse_outage_notices_from_text(
+                capture.text,
+                fallback_municipality=capture.option.label,
+            )
+        )
+
+    with SessionLocal() as session:
+        persisted_notices, created_count = persist_parsed_notices(
+            session=session,
+            parsed_notices=parsed_notices,
+            source_url=result.url,
+        )
+
+    console.print("[bold green]Monitoring run completed[/bold green]")
+    console.print(f"Municipality options found: {len(result.options)}")
+    console.print(f"Municipalities captured: {len(result.captures)}")
+    console.print(f"Parsed notices: {len(parsed_notices)}")
+    console.print(f"Persisted notices: {len(persisted_notices)}")
+    console.print(f"New notices: {created_count}")
+    console.print(f"Index: {result.index_path}")
 
 
 @app.command()

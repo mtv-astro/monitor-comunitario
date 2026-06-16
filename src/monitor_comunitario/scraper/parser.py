@@ -55,12 +55,7 @@ _FIELD_PATTERNS = {
 
 
 def clean_page_text(text: str) -> str:
-    """Normalize visible page text before parsing.
-
-    The Celesc page includes repeated cookie/banner/navigation text. We keep
-    the function conservative for now: normalize line endings, strip spaces,
-    remove empty lines and adjacent duplicates.
-    """
+    """Normalize visible page text before parsing."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [re.sub(r"\s+", " ", line).strip() for line in normalized.split("\n")]
 
@@ -94,6 +89,7 @@ def extract_relevant_outage_section(text: str) -> str:
 
     start_markers = [
         "Avisos de Desligamentos",
+        "Interrupções Programadas de Energia",
         "O que é um desligamento programado?",
     ]
 
@@ -158,18 +154,21 @@ def _build_notice_from_block(municipality: str, block: list[str]) -> ParsedOutag
     )
 
 
-def parse_outage_notices_from_text(text: str) -> list[ParsedOutageNotice]:
+def parse_outage_notices_from_text(
+    text: str,
+    fallback_municipality: str = "",
+) -> list[ParsedOutageNotice]:
     """Parse outage notices from visible page text.
 
-    The parser looks for municipality-like headings followed by text that
-    contains outage-related hints. If the page only has institutional text,
-    it returns an empty list.
+    The parser supports two modes:
+    1. municipality headings in the text;
+    2. a fallback municipality supplied by the selector capture.
     """
     section = extract_relevant_outage_section(text)
     lines = [line.strip() for line in section.splitlines() if line.strip()]
 
     notices: list[ParsedOutageNotice] = []
-    current_municipality = ""
+    current_municipality = fallback_municipality.strip()
     current_block: list[str] = []
 
     for line in lines:
