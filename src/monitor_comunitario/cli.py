@@ -1,5 +1,5 @@
-import asyncio
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import typer
 from rich.console import Console
@@ -11,12 +11,9 @@ from monitor_comunitario.scraper.celesc_page import (
     fetch_celesc_municipality_pages,
     fetch_celesc_page,
 )
-from monitor_comunitario.scraper.parser import (
-    extract_relevant_outage_section,
-    parse_outage_notices_from_text,
-)
+from monitor_comunitario.scraper.parser import extract_relevant_outage_section
 from monitor_comunitario.services.matching import run_matching_cycle
-from monitor_comunitario.services.outage_notices import persist_parsed_notices
+from monitor_comunitario.services.monitoring import run_monitoring_cycle
 
 app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
 console = Console()
@@ -36,6 +33,8 @@ def doctor() -> None:
 @app.command()
 def scrape() -> None:
     """Capture the Celesc scheduled outage page with Playwright."""
+    import asyncio
+
     settings = get_settings()
 
     result = asyncio.run(
@@ -73,6 +72,8 @@ def scrape_municipalities(
     ),
 ) -> None:
     """Select active municipalities and capture one snapshot per option."""
+    import asyncio
+
     settings = get_settings()
     max_options = limit if limit > 0 else None
 
@@ -109,50 +110,27 @@ def run_once(
         help="Maximum number of municipalities to process. Use 0 for all.",
     ),
 ) -> None:
-    """Run one monitoring cycle, persist notices and create in-app notifications."""
-    settings = get_settings()
-    max_options = limit if limit > 0 else None
+    """Run one monitoring cycle, persist notices and create notifications."""
     init_db()
-
-    result = asyncio.run(
-        fetch_celesc_municipality_pages(
-            url=settings.celesc_outages_url,
-            snapshot_dir=settings.snapshot_dir,
-            headless=settings.scraper_headless,
-            timeout_ms=settings.scraper_timeout_ms,
-            max_options=max_options,
-        )
-    )
-
-    parsed_notices = []
-
-    for capture in result.captures:
-        parsed_notices.extend(
-            parse_outage_notices_from_text(
-                capture.text,
-                fallback_municipality=capture.option.label,
-            )
-        )
-
-    with SessionLocal() as session:
-        persisted_notices, created_count = persist_parsed_notices(
-            session=session,
-            parsed_notices=parsed_notices,
-            source_url=result.url,
-        )
-        matching_summary = run_matching_cycle(session)
+    max_options = limit if limit > 0 else None
+    result = run_monitoring_cycle(limit=max_options)
+    run = result.run
 
     console.print("[bold green]Monitoring run completed[/bold green]")
-    console.print(f"Municipality options found: {len(result.options)}")
-    console.print(f"Municipalities captured: {len(result.captures)}")
-    console.print(f"Parsed notices: {len(parsed_notices)}")
-    console.print(f"Persisted notices: {len(persisted_notices)}")
-    console.print(f"New notices: {created_count}")
-    console.print(f"Users checked: {matching_summary.users_checked}")
-    console.print(f"Notices checked: {matching_summary.notices_checked}")
-    console.print(f"Matches created: {matching_summary.matches_created}")
-    console.print(f"Notifications created: {matching_summary.notifications_created}")
-    console.print(f"Index: {result.index_path}")
+    console.print(f"Run ID: {run.id}")
+    console.print(f"Status: {run.status}")
+    console.print(f"Municipality options found: {run.municipalities_found}")
+    console.print(f"Municipalities captured: {run.municipalities_captured}")
+    console.print(f"Parsed notices: {run.notices_found}")
+    console.print(f"Persisted notices: {run.notices_persisted}")
+    console.print(f"New notices: {run.notices_created}")
+    console.print(f"Users checked: {run.users_checked}")
+    console.print(f"Matches created: {run.matches_created}")
+    console.print(f"Notifications created: {run.notifications_created}")
+    console.print(f"Index: {run.raw_snapshot_path}")
+
+    if run.error_message:
+        console.print(f"[red]Error: {run.error_message}[/red]")
 
 
 @app.command("match-notices")
@@ -172,11 +150,34 @@ def match_notices() -> None:
 
 @app.command()
 def worker() -> None:
-    """Start the scheduled worker.
+    """Start the scheduled monitoring worker."""
+    from apscheduler.schedulers.blocking import BlockingScheduler  # type: ignore[import-untyped]
+    from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-untyped]
 
-    This command is intentionally a placeholder in the bootstrap package.
-    """
-    console.print("[yellow]worker ainda será implementado na fase de scheduler.[/yellow]")
+    settings = get_settings()
+    timezone = ZoneInfo(settings.app_timezone)
+
+    scheduler = BlockingScheduler(timezone=timezone)
+    trigger = CronTrigger(
+        hour=settings.scheduler_hour,
+        minute=settings.scheduler_minute,
+        timezone=timezone,
+    )
+
+    scheduler.add_job(
+        lambda: run_monitoring_cycle(limit=None),
+        trigger=trigger,
+        id="daily-celesc-monitor",
+        replace_existing=True,
+    )
+
+    console.print("[bold green]Worker started[/bold green]")
+    console.print(
+        f"Scheduled daily at {settings.scheduler_hour:02d}:"
+        f"{settings.scheduler_minute:02d} {settings.app_timezone}"
+    )
+
+    scheduler.start()
 
 
 @app.command()

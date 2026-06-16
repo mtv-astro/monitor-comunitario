@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -18,6 +18,12 @@ class NotificationStatus(StrEnum):
     CREATED = "created"
     READ = "read"
     DISMISSED = "dismissed"
+    FAILED = "failed"
+
+
+class MonitoringRunStatus(StrEnum):
+    RUNNING = "running"
+    SUCCESS = "success"
     FAILED = "failed"
 
 
@@ -98,3 +104,22 @@ class Notification(Base):
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class MonitoringRun(Base):
+    __tablename__ = "monitoring_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default=MonitoringRunStatus.RUNNING.value)
+    municipalities_found: Mapped[int] = mapped_column(Integer, default=0)
+    municipalities_captured: Mapped[int] = mapped_column(Integer, default=0)
+    notices_found: Mapped[int] = mapped_column(Integer, default=0)
+    notices_persisted: Mapped[int] = mapped_column(Integer, default=0)
+    notices_created: Mapped[int] = mapped_column(Integer, default=0)
+    users_checked: Mapped[int] = mapped_column(Integer, default=0)
+    matches_created: Mapped[int] = mapped_column(Integer, default=0)
+    notifications_created: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    raw_snapshot_path: Mapped[str] = mapped_column(String(500), default="")

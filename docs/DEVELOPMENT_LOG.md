@@ -75,3 +75,17 @@ Quinta fatia funcional:
 ### Observação
 
 A notificação por WhatsApp via Evolution API ainda permanece desligada por padrão. Esta etapa cria primeiro a camada in-app e auditável.
+
+## 2026-06-16 — feat(worker-monitoring-runs)
+
+Sexta fatia funcional:
+
+- adiciona tabela de histórico `monitoring_runs`;
+- centraliza o fluxo em `run_monitoring_cycle`;
+- registra status, métricas, erro e snapshot por execução;
+- adiciona endpoints admin para consultar e disparar execuções;
+- adiciona worker com APScheduler para rodar diariamente no horário configurado.
+
+### Observação
+
+O worker ainda roda no mesmo pacote Python, mas separado da API em deploy. A próxima etapa deve ajustar Docker Compose para subir `api` e `worker` como serviços separados.
