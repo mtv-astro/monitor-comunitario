@@ -60,3 +60,18 @@ Quarta fatia funcional:
 ### Observação
 
 Se a captura por município não trouxer blocos detalhados, o parser retorna zero avisos. O pipeline, porém, fica pronto para persistir assim que o texto capturado expuser dados estruturáveis.
+
+## 2026-06-16 — feat(matcher-notifications)
+
+Quinta fatia funcional:
+
+- adiciona tabela de matches entre usuário e aviso;
+- adiciona tabela de notificações in-app;
+- adiciona serviço de matching por município, bairro, rua e similaridade;
+- adiciona deduplicação de matches e notificações;
+- adiciona rotas de listagem e leitura de notificações;
+- conecta `run-once` ao fluxo completo até notificações in-app.
+
+### Observação
+
+A notificação por WhatsApp via Evolution API ainda permanece desligada por padrão. Esta etapa cria primeiro a camada in-app e auditável.

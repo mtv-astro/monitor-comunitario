@@ -1,7 +1,7 @@
-﻿from datetime import UTC, datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -54,4 +54,47 @@ class OutageNotice(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     raw_text: Mapped[str] = mapped_column(Text, default="")
     content_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class UserOutageMatch(Base):
+    __tablename__ = "user_outage_matches"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "outage_notice_id",
+            name="uq_user_outage_match_user_notice",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    outage_notice_id: Mapped[int] = mapped_column(ForeignKey("outage_notices.id"), index=True)
+    match_level: Mapped[str] = mapped_column(String(40))
+    match_score: Mapped[float] = mapped_column(Float, default=0.0)
+    match_reason: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "outage_notice_id",
+            "channel",
+            name="uq_notification_user_notice_channel",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    outage_notice_id: Mapped[int] = mapped_column(ForeignKey("outage_notices.id"), index=True)
+    channel: Mapped[str] = mapped_column(String(40), default="app")
+    status: Mapped[str] = mapped_column(String(40), default=NotificationStatus.CREATED.value)
+    title: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(Text)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

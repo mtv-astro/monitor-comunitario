@@ -15,6 +15,7 @@ from monitor_comunitario.scraper.parser import (
     extract_relevant_outage_section,
     parse_outage_notices_from_text,
 )
+from monitor_comunitario.services.matching import run_matching_cycle
 from monitor_comunitario.services.outage_notices import persist_parsed_notices
 
 app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
@@ -108,7 +109,7 @@ def run_once(
         help="Maximum number of municipalities to process. Use 0 for all.",
     ),
 ) -> None:
-    """Run one monitoring cycle and persist parsed outage notices."""
+    """Run one monitoring cycle, persist notices and create in-app notifications."""
     settings = get_settings()
     max_options = limit if limit > 0 else None
     init_db()
@@ -139,6 +140,7 @@ def run_once(
             parsed_notices=parsed_notices,
             source_url=result.url,
         )
+        matching_summary = run_matching_cycle(session)
 
     console.print("[bold green]Monitoring run completed[/bold green]")
     console.print(f"Municipality options found: {len(result.options)}")
@@ -146,7 +148,26 @@ def run_once(
     console.print(f"Parsed notices: {len(parsed_notices)}")
     console.print(f"Persisted notices: {len(persisted_notices)}")
     console.print(f"New notices: {created_count}")
+    console.print(f"Users checked: {matching_summary.users_checked}")
+    console.print(f"Notices checked: {matching_summary.notices_checked}")
+    console.print(f"Matches created: {matching_summary.matches_created}")
+    console.print(f"Notifications created: {matching_summary.notifications_created}")
     console.print(f"Index: {result.index_path}")
+
+
+@app.command("match-notices")
+def match_notices() -> None:
+    """Match existing users against persisted notices and create notifications."""
+    init_db()
+
+    with SessionLocal() as session:
+        summary = run_matching_cycle(session)
+
+    console.print("[bold green]Matching completed[/bold green]")
+    console.print(f"Users checked: {summary.users_checked}")
+    console.print(f"Notices checked: {summary.notices_checked}")
+    console.print(f"Matches created: {summary.matches_created}")
+    console.print(f"Notifications created: {summary.notifications_created}")
 
 
 @app.command()
