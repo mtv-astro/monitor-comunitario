@@ -73,3 +73,19 @@ def test_parse_outage_notices_extracts_simple_notice_block() -> None:
     assert notice.street == "Avenida Pequeno Príncipe"
     assert notice.description == "Manutenção preventiva na rede elétrica."
     assert "Horário" in notice.raw_text
+
+
+def test_parse_outage_notices_uses_fallback_municipality() -> None:
+    text = """
+    Interrupções Programadas de Energia
+    Data: 20/06/2026
+    Horário: 08:00 às 12:00
+    Bairro: Campeche
+    Rua: Avenida Pequeno Príncipe
+    Motivo: Manutenção preventiva na rede elétrica.
+    """
+
+    notices = parse_outage_notices_from_text(text, fallback_municipality="FLORIANOPOLIS")
+
+    assert len(notices) == 1
+    assert notices[0].municipality == "FLORIANOPOLIS"
