@@ -1,11 +1,22 @@
+﻿from collections.abc import Generator
+
+import pytest
 from fastapi.testclient import TestClient
 
 from monitor_comunitario.api.main import app
+from monitor_comunitario.db.init_db import init_db
 
-client = TestClient(app)
+
+@pytest.fixture()
+def client() -> Generator[TestClient, None, None]:
+    """Create database tables and provide a FastAPI test client."""
+    init_db()
+
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_create_and_get_user() -> None:
+def test_create_and_get_user(client: TestClient) -> None:
     payload = {
         "name": "Carlos Selva",
         "phone": "5548999999999",
@@ -34,7 +45,7 @@ def test_create_and_get_user() -> None:
     assert get_response.json()["id"] == created["id"]
 
 
-def test_update_user() -> None:
+def test_update_user(client: TestClient) -> None:
     create_response = client.post(
         "/users",
         json={
@@ -56,7 +67,7 @@ def test_update_user() -> None:
     assert update_response.json()["street"] == "Rua Koesa"
 
 
-def test_deactivate_user() -> None:
+def test_deactivate_user(client: TestClient) -> None:
     create_response = client.post(
         "/users",
         json={
