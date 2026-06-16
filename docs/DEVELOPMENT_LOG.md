@@ -31,18 +31,17 @@ Segunda fatia funcional:
 
 A extração de avisos reais será feita depois de analisarmos os snapshots capturados localmente. Esta etapa prioriza auditabilidade e estabilidade da coleta.
 
-## 2026-06-16 — feat(outage-notice-persistence)
+## 2026-06-16 — feat(municipality-selector-scraper)
 
 Terceira fatia funcional:
 
-- expande o parser para identificar blocos simples de aviso;
-- mantém retorno vazio quando só há texto institucional;
-- adiciona hash de conteúdo para deduplicação;
-- adiciona serviço de persistência de avisos;
-- adiciona endpoint `GET /outage-notices`;
-- conecta `run-once` ao fluxo scrape → parse → persist;
-- adiciona testes de parser e persistência.
+- adiciona busca por caixa seletora nativa de municípios;
+- enumera opções ativas;
+- filtra placeholders como "Selecione";
+- adiciona comando `monitor-comunitario scrape-municipalities`;
+- captura snapshots HTML/TXT por município selecionado;
+- salva índice JSON com opções e arquivos capturados.
 
 ### Observação
 
-A identificação de blocos reais ainda depende de snapshots com municípios ativos. Esta etapa deixa o pipeline preparado para persistir quando a Celesc publicar blocos extraíveis no texto capturado.
+Esta etapa corrige a premissa do scraper: os avisos reais dependem da seleção de município ativo. A persistência dos avisos deve vir depois da análise dos snapshots por município.
