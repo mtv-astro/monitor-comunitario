@@ -1,4 +1,4 @@
-.PHONY: install api test lint format typecheck doctor
+.PHONY: install api test lint format typecheck doctor docker-up docker-down docker-logs docker-build
 
 install:
 	uv sync --dev
@@ -21,3 +21,15 @@ format:
 
 typecheck:
 	uv run mypy src
+
+docker-build:
+	docker compose --env-file .env.docker.example build
+
+docker-up:
+	docker compose --env-file .env.docker.example up --build
+
+docker-down:
+	docker compose --env-file .env.docker.example down
+
+docker-logs:
+	docker compose --env-file .env.docker.example logs -f
