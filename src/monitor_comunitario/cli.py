@@ -5,8 +5,14 @@ import typer
 from rich.console import Console
 
 from monitor_comunitario.core.config import get_settings
+from monitor_comunitario.db.init_db import init_db
+from monitor_comunitario.db.session import SessionLocal
 from monitor_comunitario.scraper.celesc_page import fetch_celesc_page
-from monitor_comunitario.scraper.parser import extract_relevant_outage_section
+from monitor_comunitario.scraper.parser import (
+    extract_relevant_outage_section,
+    parse_outage_notices_from_text,
+)
+from monitor_comunitario.services.outage_notices import persist_parsed_notices
 
 app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
 console = Console()
@@ -56,13 +62,34 @@ def scrape() -> None:
 
 @app.command()
 def run_once() -> None:
-    """Run one monitoring cycle.
+    """Run one monitoring cycle and persist parsed outage notices."""
+    settings = get_settings()
+    init_db()
 
-    This command is intentionally a placeholder in the bootstrap package.
-    The implementation will call the monitoring service after parser,
-    database matching and notification providers are implemented.
-    """
-    console.print("[yellow]run-once ainda será implementado na fase de worker.[/yellow]")
+    result = asyncio.run(
+        fetch_celesc_page(
+            url=settings.celesc_outages_url,
+            snapshot_dir=settings.snapshot_dir,
+            headless=settings.scraper_headless,
+            timeout_ms=settings.scraper_timeout_ms,
+        )
+    )
+
+    parsed_notices = parse_outage_notices_from_text(result.text)
+
+    with SessionLocal() as session:
+        persisted_notices, created_count = persist_parsed_notices(
+            session=session,
+            parsed_notices=parsed_notices,
+            source_url=result.url,
+        )
+
+    console.print("[bold green]Monitoring run completed[/bold green]")
+    console.print(f"Parsed notices: {len(parsed_notices)}")
+    console.print(f"Persisted notices: {len(persisted_notices)}")
+    console.print(f"New notices: {created_count}")
+    console.print(f"HTML snapshot: {result.html_snapshot_path}")
+    console.print(f"Text snapshot: {result.text_snapshot_path}")
 
 
 @app.command()

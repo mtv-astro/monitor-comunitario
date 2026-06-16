@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from monitor_comunitario.api.routes_outage_notices import router as outage_notices_router
 from monitor_comunitario.api.routes_users import router as users_router
 from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
@@ -25,6 +26,7 @@ app = FastAPI(
 )
 
 app.include_router(users_router)
+app.include_router(outage_notices_router)
 
 
 @app.get("/health")

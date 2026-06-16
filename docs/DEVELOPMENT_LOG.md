@@ -1,4 +1,4 @@
-﻿# Development Log
+# Development Log
 
 ## 2026-06-16 — feat(database-and-users)
 
@@ -30,3 +30,19 @@ Segunda fatia funcional:
 ### Observação
 
 A extração de avisos reais será feita depois de analisarmos os snapshots capturados localmente. Esta etapa prioriza auditabilidade e estabilidade da coleta.
+
+## 2026-06-16 — feat(outage-notice-persistence)
+
+Terceira fatia funcional:
+
+- expande o parser para identificar blocos simples de aviso;
+- mantém retorno vazio quando só há texto institucional;
+- adiciona hash de conteúdo para deduplicação;
+- adiciona serviço de persistência de avisos;
+- adiciona endpoint `GET /outage-notices`;
+- conecta `run-once` ao fluxo scrape → parse → persist;
+- adiciona testes de parser e persistência.
+
+### Observação
+
+A identificação de blocos reais ainda depende de snapshots com municípios ativos. Esta etapa deixa o pipeline preparado para persistir quando a Celesc publicar blocos extraíveis no texto capturado.
