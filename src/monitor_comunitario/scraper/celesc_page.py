@@ -1,12 +1,14 @@
-import json
+﻿import json
 import re
 import unicodedata
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
 from playwright.async_api import (
+    Frame,
     Locator,
     Page,
     async_playwright,
@@ -146,29 +148,56 @@ async def get_select_options(select: Locator) -> list[MunicipalityOption]:
     return options
 
 
-async def find_municipality_select(page: Page) -> Locator | None:
-    """Find the native select that contains active municipality options.
+async def find_municipality_select_in_frames(page: Page) -> tuple[Frame, Locator] | None:
+    """Find the native select that contains municipality options in any frame.
 
-    The current Celesc page exposes active municipalities through a selectable
-    control. We prefer a real `<select>` because it is stable and easy to drive
-    through Playwright. If the website changes to a custom component, this
-    function is the only place that should need adaptation.
+    The Celesc page embeds the interruption search UI inside an iframe. The
+    main DOM has no select, so we must inspect every Playwright frame.
     """
-    selects = page.locator("select")
-    select_count = await selects.count()
-
-    best_select: Locator | None = None
+    best_result: tuple[Frame, Locator] | None = None
     best_option_count = 0
 
-    for index in range(select_count):
-        candidate = selects.nth(index)
-        options = await get_select_options(candidate)
+    for frame in page.frames:
+        try:
+            selects = frame.locator("select")
+            select_count = await selects.count()
+        except Exception:
+            continue
 
-        if len(options) > best_option_count:
-            best_select = candidate
-            best_option_count = len(options)
+        for index in range(select_count):
+            candidate = selects.nth(index)
+            options = await get_select_options(candidate)
 
-    return best_select
+            if len(options) > best_option_count:
+                best_result = (frame, candidate)
+                best_option_count = len(options)
+
+    return best_result
+
+
+async def click_ok_button(frame: Frame) -> None:
+    """Click the OK button associated with the municipality selector."""
+    candidates = [
+        frame.get_by_role("button", name=re.compile(r"^ok$", re.IGNORECASE)),
+        frame.locator("input[type='submit'][value='OK']"),
+        frame.locator("input[type='button'][value='OK']"),
+        frame.locator("button:has-text('OK')"),
+    ]
+
+    for candidate in candidates:
+        try:
+            if await candidate.count() > 0:
+                await candidate.first.click(timeout=3_000)
+                return
+        except PlaywrightTimeoutError:
+            continue
+
+
+async def capture_frame_text_and_html(frame: Frame, timeout_ms: int) -> tuple[str, str]:
+    """Capture current frame HTML and cleaned visible text."""
+    html = await frame.content()
+    raw_text = await frame.locator("body").inner_text(timeout=timeout_ms)
+    return html, clean_page_text(raw_text)
 
 
 async def fetch_celesc_page(
@@ -238,6 +267,7 @@ async def fetch_celesc_municipality_pages(
     latest_index_path = snapshot_path / "latest-celesc-municipalities.json"
 
     captures: list[MunicipalityCapture] = []
+    options: list[MunicipalityOption] = []
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=headless)
@@ -247,30 +277,36 @@ async def fetch_celesc_municipality_pages(
         await page.goto(url, wait_until="networkidle")
         await accept_cookie_banner(page)
         await page.wait_for_load_state("networkidle")
+        await page.wait_for_timeout(1_000)
 
-        select = await find_municipality_select(page)
+        select_result = await find_municipality_select_in_frames(page)
 
-        if select is None:
-            html = await page.content()
-            raw_text = await page.locator("body").inner_text(timeout=timeout_ms)
-            text = clean_page_text(raw_text)
-            options: list[MunicipalityOption] = []
-        else:
+        if select_result is not None:
+            frame, select = select_result
             options = await get_select_options(select)
             limited_options = options[:max_options] if max_options else options
 
             for option in limited_options:
+                refreshed_result = await find_municipality_select_in_frames(page)
+
+                if refreshed_result is None:
+                    break
+
+                frame, select = refreshed_result
+
                 await select.select_option(value=option.value)
-                await page.wait_for_timeout(1_000)
+                await click_ok_button(frame)
+                await page.wait_for_timeout(1_500)
 
-                try:
+                with suppress(PlaywrightTimeoutError):
                     await page.wait_for_load_state("networkidle", timeout=5_000)
-                except PlaywrightTimeoutError:
-                    pass
 
-                html = await page.content()
-                raw_text = await page.locator("body").inner_text(timeout=timeout_ms)
-                text = clean_page_text(raw_text)
+                refreshed_result = await find_municipality_select_in_frames(page)
+
+                if refreshed_result is not None:
+                    frame, _ = refreshed_result
+
+                html, text = await capture_frame_text_and_html(frame, timeout_ms)
                 option_slug = build_safe_snapshot_slug(option.label)
 
                 html_snapshot_path = snapshot_path / f"{stem}-{option_slug}.html"
@@ -303,6 +339,7 @@ async def fetch_celesc_municipality_pages(
                 "text_snapshot_path": str(capture.text_snapshot_path),
                 "text_chars": len(capture.text),
                 "html_bytes": len(capture.html.encode("utf-8")),
+                "text_preview": capture.text[:1000],
             }
             for capture in captures
         ],
@@ -335,3 +372,4 @@ async def fetch_celesc_page_html(
         timeout_ms=timeout_ms,
     )
     return result.html
+
