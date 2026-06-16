@@ -32,6 +32,18 @@ class Settings(BaseSettings):
     evolution_instance: str = ""
     evolution_enabled: bool = False
 
+    ads_enabled: bool = False
+    ads_provider: str = "placeholder"
+    adsense_client_id: str = ""
+    adsense_default_slot: str = ""
+
+    analytics_enabled: bool = False
+    analytics_provider: str = "none"
+    google_analytics_id: str = ""
+
+    consent_required: bool = True
+    consent_version: str = "2026-06-16-v1"
+
 
 @lru_cache
 def get_settings() -> Settings:

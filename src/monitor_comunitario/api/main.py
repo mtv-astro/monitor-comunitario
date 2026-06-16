@@ -2,11 +2,14 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from monitor_comunitario.api.routes_admin import router as admin_router
 from monitor_comunitario.api.routes_notifications import router as notifications_router
 from monitor_comunitario.api.routes_outage_notices import router as outage_notices_router
 from monitor_comunitario.api.routes_users import router as users_router
+from monitor_comunitario.api.routes_web import STATIC_DIR
+from monitor_comunitario.api.routes_web import router as web_router
 from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
 
@@ -27,6 +30,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+app.include_router(web_router)
 app.include_router(users_router)
 app.include_router(outage_notices_router)
 app.include_router(notifications_router)
