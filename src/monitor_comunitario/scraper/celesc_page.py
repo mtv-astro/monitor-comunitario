@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 import unicodedata
 from contextlib import suppress
