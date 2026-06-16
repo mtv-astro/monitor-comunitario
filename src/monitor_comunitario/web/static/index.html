@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Monitor Comunitário Celesc</title>
+    <meta
+      name="description"
+      content="Cadastro comunitário para receber alertas de desligamentos programados da Celesc por município e endereço."
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Navegação principal">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true">MC</span>
+          <span>
+            <strong>Monitor Comunitário</strong>
+            <small>avisos públicos de energia</small>
+          </span>
+        </a>
+
+        <a class="nav-link" href="#cadastro">Cadastrar endereço</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-content">
+          <p class="eyebrow">Alertas comunitários</p>
+          <h1>Saiba quando há desligamento programado perto do seu endereço.</h1>
+          <p class="hero-copy">
+            Cadastre seu município e endereço para acompanhar avisos públicos de desligamentos
+            programados da Celesc. O monitor cruza os avisos coletados com sua região e exibe
+            possíveis alertas no painel.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#cadastro">Cadastrar agora</a>
+            <a class="button button-secondary" href="#como-funciona">Como funciona</a>
+          </div>
+
+          <p class="disclaimer">
+            Este é um monitor comunitário independente. As informações oficiais continuam sendo da
+            Celesc e podem sofrer alteração ou cancelamento.
+          </p>
+        </div>
+
+        <aside
+          class="ad-card ad-card-hero ad-slot"
+          data-ad-slot="hero"
+          data-ad-format="rectangle"
+          aria-label="Espaço publicitário"
+        >
+          <span>Publicidade</span>
+          <strong>Espaço para anúncio local</strong>
+          <p>Mercados, assistências, cafés, baterias portáteis e serviços do bairro.</p>
+        </aside>
+      </section>
+
+      <section class="cards" aria-label="Resumo do serviço">
+        <article class="info-card">
+          <span class="card-number">01</span>
+          <h2>Cadastro simples</h2>
+          <p>Nome, telefone, município, bairro e rua. Sem login nesta primeira versão.</p>
+        </article>
+
+        <article class="info-card">
+          <span class="card-number">02</span>
+          <h2>Monitoramento diário</h2>
+          <p>O worker consulta os avisos públicos e registra cada execução no histórico.</p>
+        </article>
+
+        <article class="info-card">
+          <span class="card-number">03</span>
+          <h2>Painel do morador</h2>
+          <p>O navegador salva o ID do cadastro e permite consultar os alertas criados.</p>
+        </article>
+      </section>
+
+      <section id="cadastro" class="layout">
+        <div class="panel">
+          <div class="section-heading">
+            <p class="eyebrow">Cadastro</p>
+            <h2>Receber alertas do meu endereço</h2>
+            <p>
+              Preencha os dados abaixo. Quanto mais específico o endereço, melhor o cruzamento com
+              bairro e rua.
+            </p>
+          </div>
+
+          <form id="registration-form" class="form">
+            <label>
+              Nome
+              <input id="name" name="name" type="text" autocomplete="name" required />
+            </label>
+
+            <label>
+              Telefone ou WhatsApp
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="5548999999999"
+                required
+              />
+            </label>
+
+            <div class="form-grid">
+              <label>
+                Município
+                <input id="municipality" name="municipality" type="text" required />
+              </label>
+
+              <label>
+                Bairro
+                <input id="neighborhood" name="neighborhood" type="text" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Rua
+                <input id="street" name="street" type="text" />
+              </label>
+
+              <label>
+                Número
+                <input id="number" name="number" type="text" inputmode="numeric" />
+              </label>
+            </div>
+
+            <label>
+              CEP
+              <input id="zipcode" name="zipcode" type="text" inputmode="numeric" />
+            </label>
+
+            <label class="checkbox">
+              <input
+                id="accept_municipality_wide_alerts"
+                name="accept_municipality_wide_alerts"
+                type="checkbox"
+                checked
+              />
+              <span>Também quero receber alertas amplos do município quando bairro/rua não forem claros.</span>
+            </label>
+            <label class="checkbox checkbox-required">
+              <input id="accept_legal_terms" name="accept_legal_terms" type="checkbox" required />
+              <span>
+                Aceito os <a href="/termos" target="_blank" rel="noreferrer">Termos</a>
+                e a <a href="/privacidade" target="_blank" rel="noreferrer">Política de Privacidade</a>.
+              </span>
+            </label>
+
+            <button class="button button-primary" type="submit">Salvar cadastro</button>
+
+            <p id="form-status" class="status-message" role="status"></p>
+          </form>
+        </div>
+
+        <aside class="side-column">
+          <div
+            class="ad-card ad-slot"
+            data-ad-slot="sidebar"
+            data-ad-format="rectangle"
+            aria-label="Espaço publicitário"
+          >
+            <span>Publicidade</span>
+            <strong>Anúncio do bairro</strong>
+            <p>Bloco reservado para parceiros locais ou campanha comunitária.</p>
+          </div>
+
+          <div class="mini-panel">
+            <h2>Meu painel</h2>
+            <p id="stored-user-text">Nenhum cadastro salvo neste navegador.</p>
+
+            <div class="lookup-row">
+              <input
+                id="lookup-user-id"
+                type="number"
+                min="1"
+                placeholder="ID do cadastro"
+                aria-label="ID do cadastro"
+              />
+              <button id="load-notifications" class="button button-secondary" type="button">
+                Buscar avisos
+              </button>
+            </div>
+
+            <div id="notifications-list" class="notifications-list" aria-live="polite"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section id="como-funciona" class="how-it-works">
+        <div class="section-heading">
+          <p class="eyebrow">Como funciona</p>
+          <h2>Da página pública ao alerta comunitário</h2>
+        </div>
+
+        <ol class="steps">
+          <li>
+            <strong>Coleta</strong>
+            <span>O sistema consulta os avisos públicos de desligamento programado.</span>
+          </li>
+          <li>
+            <strong>Persistência</strong>
+            <span>Cada aviso é salvo com hash para evitar duplicidade.</span>
+          </li>
+          <li>
+            <strong>Cruzamento</strong>
+            <span>Município, bairro e rua são comparados com os cadastros.</span>
+          </li>
+          <li>
+            <strong>Notificação</strong>
+            <span>Alertas aparecem no painel e podem evoluir para WhatsApp depois.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section
+        class="ad-strip ad-slot"
+        data-ad-slot="footer"
+        data-ad-format="horizontal"
+        aria-label="Espaço publicitário horizontal"
+      >
+        <span>Publicidade</span>
+        <strong>Espaço horizontal para campanha, patrocinador ou utilidade pública.</strong>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Monitor Comunitário Celesc — projeto independente de monitoramento público.</p>
+      <nav class="footer-links" aria-label="Links legais">
+        <a href="/privacidade">Privacidade</a>
+        <a href="/termos">Termos</a>
+        <a href="/cookies">Cookies</a>
+        <button id="open-consent-settings" class="footer-button" type="button">
+          Preferências de privacidade
+        </button>
+      </nav>
+    </footer>
+
+    <div
+      id="consent-banner"
+      class="consent-banner"
+      role="dialog"
+      aria-live="polite"
+      aria-label="Preferências de privacidade"
+    >
+      <div class="consent-copy">
+        <strong>Privacidade</strong>
+        <p id="consent-banner-text">
+          Ads e analytics só serão carregados conforme sua escolha.
+        </p>
+
+        <button id="customize-consent" class="consent-link" type="button">
+          Opções
+        </button>
+
+        <div id="consent-preferences" class="consent-preferences" hidden>
+          <label class="checkbox">
+            <input type="checkbox" checked disabled />
+            <span>Necessários: cadastro, painel e preferências.</span>
+          </label>
+
+          <label class="checkbox">
+            <input id="consent-analytics" type="checkbox" />
+            <span>Analytics.</span>
+          </label>
+
+          <label class="checkbox">
+            <input id="consent-ads" type="checkbox" />
+            <span>Publicidade.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="consent-banner-actions">
+        <button id="reject-consent" class="button button-secondary" type="button">
+          Recusar
+        </button>
+        <button id="accept-consent" class="button button-primary" type="button">
+          Aceitar
+        </button>
+        <button id="save-consent" class="button button-primary" type="button" hidden>
+          Salvar
+        </button>
+      </div>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
