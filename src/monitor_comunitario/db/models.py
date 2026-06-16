@@ -1,8 +1,13 @@
-from datetime import datetime
+﻿from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def utc_now() -> datetime:
+    """Return a timezone-aware UTC timestamp for persisted records."""
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
@@ -29,8 +34,12 @@ class User(Base):
     zipcode: Mapped[str] = mapped_column(String(20), default="")
     accept_municipality_wide_alerts: Mapped[bool] = mapped_column(Boolean, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
 
 
 class OutageNotice(Base):
@@ -45,4 +54,4 @@ class OutageNotice(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     raw_text: Mapped[str] = mapped_column(Text, default="")
     content_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

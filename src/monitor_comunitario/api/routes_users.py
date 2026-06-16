@@ -1,0 +1,120 @@
+﻿from datetime import UTC, datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from monitor_comunitario.db.models import User
+from monitor_comunitario.db.session import get_session
+from monitor_comunitario.schemas.users import UserCreate, UserRead, UserUpdate
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
+
+def utc_now() -> datetime:
+    """Return a timezone-aware UTC timestamp."""
+    return datetime.now(UTC)
+
+
+@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+def create_user(
+    payload: UserCreate,
+    session: SessionDep,
+) -> User:
+    """Create a monitored user/address record."""
+    user = User(**payload.model_dump())
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@router.get("", response_model=list[UserRead])
+def list_users(
+    session: SessionDep,
+    include_inactive: bool = False,
+) -> list[User]:
+    """List registered users.
+
+    Inactive users are hidden by default because they should not receive
+    outage notifications.
+    """
+    query = select(User).order_by(User.created_at.desc())
+
+    if not include_inactive:
+        query = query.where(User.is_active.is_(True))
+
+    return list(session.scalars(query).all())
+
+
+@router.get("/{user_id}", response_model=UserRead)
+def get_user(
+    user_id: int,
+    session: SessionDep,
+) -> User:
+    """Return a single user by ID."""
+    user = session.get(User, user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    return user
+
+
+@router.patch("/{user_id}", response_model=UserRead)
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    session: SessionDep,
+) -> User:
+    """Update a user record partially."""
+    user = session.get(User, user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    user.updated_at = utc_now()
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
+
+
+@router.delete("/{user_id}", response_model=UserRead)
+def deactivate_user(
+    user_id: int,
+    session: SessionDep,
+) -> User:
+    """Deactivate a user without deleting historical records."""
+    user = session.get(User, user_id)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    user.is_active = False
+    user.updated_at = utc_now()
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
