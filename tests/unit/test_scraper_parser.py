@@ -27,7 +27,7 @@ def test_extract_relevant_outage_section_stops_before_footer() -> None:
     Avisos de Desligamentos
     O que é um desligamento programado?
     IMPORTANTE: Somente são listados os municípios que possuem desligamentos agendados.
-    Ajuda
+    AJUDA
     Atendimento online
     """
 
@@ -38,5 +38,38 @@ def test_extract_relevant_outage_section_stops_before_footer() -> None:
     assert "Atendimento online" not in section
 
 
-def test_parse_outage_notices_is_conservative_until_snapshots_define_blocks() -> None:
-    assert parse_outage_notices_from_text("Avisos de Desligamentos") == []
+def test_parse_outage_notices_returns_empty_when_only_institutional_text_exists() -> None:
+    text = """
+    Avisos de Desligamentos
+    O que é um desligamento programado?
+    São interrupções realizadas, de forma programada.
+    IMPORTANTE: Somente são listados os municípios que possuem desligamentos agendados.
+    """
+
+    assert parse_outage_notices_from_text(text) == []
+
+
+def test_parse_outage_notices_extracts_simple_notice_block() -> None:
+    text = """
+    Avisos de Desligamentos
+    FLORIANÓPOLIS
+    Data: 20/06/2026
+    Horário: 08:00 às 12:00
+    Bairro: Campeche
+    Rua: Avenida Pequeno Príncipe
+    Motivo: Manutenção preventiva na rede elétrica.
+    AJUDA
+    Atendimento online
+    """
+
+    notices = parse_outage_notices_from_text(text)
+
+    assert len(notices) == 1
+
+    notice = notices[0]
+
+    assert notice.municipality == "FLORIANÓPOLIS"
+    assert notice.neighborhood == "Campeche"
+    assert notice.street == "Avenida Pequeno Príncipe"
+    assert notice.description == "Manutenção preventiva na rede elétrica."
+    assert "Horário" in notice.raw_text
