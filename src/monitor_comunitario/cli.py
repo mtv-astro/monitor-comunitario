@@ -28,6 +28,72 @@ def doctor() -> None:
     console.print(f"Timezone: {settings.app_timezone}")
     console.print(f"Celesc URL: {settings.celesc_outages_url}")
     console.print(f"Notification provider: {settings.notification_provider}")
+    console.print(f"Database URL: {settings.database_url}")
+
+
+@app.command("db-upgrade")
+def db_upgrade(
+    revision: str = typer.Argument("head", help="Target Alembic revision."),
+) -> None:
+    """Apply database migrations."""
+    from monitor_comunitario.db.migrations import upgrade_database
+
+    upgrade_database(revision)
+    console.print(f"[bold green]Database upgraded to {revision}[/bold green]")
+
+
+@app.command("db-downgrade")
+def db_downgrade(
+    revision: str = typer.Argument("-1", help="Target Alembic downgrade revision."),
+) -> None:
+    """Downgrade database migrations."""
+    from monitor_comunitario.db.migrations import downgrade_database
+
+    downgrade_database(revision)
+    console.print(f"[bold yellow]Database downgraded to {revision}[/bold yellow]")
+
+
+@app.command("db-stamp")
+def db_stamp(
+    revision: str = typer.Argument("head", help="Revision to stamp without running migrations."),
+) -> None:
+    """Mark the database as being at a revision without running migrations."""
+    from monitor_comunitario.db.migrations import stamp_database
+
+    stamp_database(revision)
+    console.print(f"[bold green]Database stamped as {revision}[/bold green]")
+
+
+@app.command("db-current")
+def db_current() -> None:
+    """Print the current database revision."""
+    from monitor_comunitario.db.migrations import show_current_revision
+
+    show_current_revision()
+
+
+@app.command("db-history")
+def db_history() -> None:
+    """Print database migration history."""
+    from monitor_comunitario.db.migrations import show_migration_history
+
+    show_migration_history()
+
+
+@app.command("db-revision")
+def db_revision(
+    message: str = typer.Argument(..., help="Migration message."),
+    autogenerate: bool = typer.Option(
+        False,
+        "--autogenerate",
+        "-a",
+        help="Autogenerate migration from SQLAlchemy metadata.",
+    ),
+) -> None:
+    """Create a new Alembic revision."""
+    from monitor_comunitario.db.migrations import create_revision
+
+    create_revision(message=message, autogenerate=autogenerate)
 
 
 @app.command()

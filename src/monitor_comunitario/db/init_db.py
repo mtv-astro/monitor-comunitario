@@ -1,11 +1,16 @@
+from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.models import Base
 from monitor_comunitario.db.session import engine
 
+settings = get_settings()
+
 
 def init_db() -> None:
-    """Create database tables for local development.
+    """Create database tables only for local SQLite development.
 
-    Alembic migrations will be added as the project matures. For the first
-    functional slice, creating tables on startup keeps local setup simple.
+    Production-like databases should be managed with Alembic migrations:
+
+        uv run monitor-comunitario db-upgrade
     """
-    Base.metadata.create_all(bind=engine)
+    if settings.database_url.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
