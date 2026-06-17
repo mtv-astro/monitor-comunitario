@@ -55,6 +55,19 @@ Configure `DATABASE_URL` com a connection string do Supabase.
 docker compose -f docker-compose.supabase.yml --env-file .env.supabase up --build
 ```
 
+## Admin API key
+
+Admin routes are protected by the `X-Admin-API-Key` header.
+
+Configure a strong key before exposing the API:
+
+```env
+ADMIN_API_KEY=<strong-admin-api-key>
+```
+
+Requests to `/admin/*` without the header or with an invalid key return `401 Unauthorized`.
+If the application starts without `ADMIN_API_KEY`, admin routes remain locked and return `503 Service Unavailable`.
+
 ## Comandos Alembic
 
 ```powershell

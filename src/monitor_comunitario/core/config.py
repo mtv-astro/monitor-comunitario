@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_timezone: str = "America/Sao_Paulo"
     database_url: str = "sqlite:///./data/monitor_comunitario.db"
+    admin_api_key: str = ""
 
     celesc_outages_url: str = "https://www.celesc.com.br/avisos-de-desligamentos"
     scraper_headless: bool = True
