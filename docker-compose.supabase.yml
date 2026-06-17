@@ -1,0 +1,27 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      uv run uvicorn monitor_comunitario.api.main:app
+      --host 0.0.0.0
+      --port 8000
+    env_file:
+      - .env.supabase.example
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./snapshots:/app/snapshots
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uv run monitor-comunitario worker
+    env_file:
+      - .env.supabase.example
+    volumes:
+      - ./snapshots:/app/snapshots
+    restart: unless-stopped
