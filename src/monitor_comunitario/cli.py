@@ -1,8 +1,8 @@
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from alembic.config import Config as AlembicConfig  # type: ignore
 from alembic import command as alembic_command  # type: ignore
+from alembic.config import Config as AlembicConfig  # type: ignore
 from rich.console import Console
 import typer
 
