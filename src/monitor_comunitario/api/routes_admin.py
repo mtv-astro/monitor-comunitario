@@ -4,12 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from monitor_comunitario.api.security import require_admin_api_key
 from monitor_comunitario.db.models import MonitoringRun
 from monitor_comunitario.db.session import get_session
 from monitor_comunitario.schemas.monitoring_runs import MonitoringRunRead
 from monitor_comunitario.services.monitoring import run_monitoring_cycle
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin_api_key)],
+)
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
