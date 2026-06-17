@@ -1,8 +1,8 @@
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from alembic import command as alembic_command  # type: ignore
 from alembic.config import Config as AlembicConfig  # type: ignore
+from alembic import command as alembic_command  # type: ignore
 from rich.console import Console
 import typer
 
@@ -177,11 +177,8 @@ def worker() -> None:
     )
 
     console.print("[bold green]Worker started[/bold green]")
-    console.print(
-        "Scheduled daily at "
-        f"{settings.scheduler_hour:02d}:{settings.scheduler_minute:02d} "
-        f"{settings.app_timezone}"
-    )
+    time_str = f"{settings.scheduler_hour:02d}:{settings.scheduler_minute:02d}"
+    console.print(f"Scheduled daily at {time_str} {settings.app_timezone}")
 
     scheduler.start()
 
@@ -260,7 +257,7 @@ def cli_db_stamp(
     """Mark the database with the given revision without running migrations."""
     cfg = AlembicConfig("alembic.ini")
     alembic_command.stamp(cfg, revision)
-    console.print(f"[green]Database stamped at {revision}[/green]")
+    console.print(f"[green]Database stamped at {revision}")
 
 
 @app.command("db-export")
