@@ -1,10 +1,10 @@
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from alembic import command as alembic_command  # type: ignore
-from alembic.config import Config as AlembicConfig  # type: ignore
-from rich.console import Console
 import typer
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
+from rich.console import Console
 
 from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
@@ -157,7 +157,7 @@ def worker() -> None:
     from apscheduler.schedulers.blocking import (
         BlockingScheduler,
     )  # type: ignore[import-untyped]
-    from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-untyped]
+    from apscheduler.triggers.cron import CronTrigger
 
     settings = get_settings()
     timezone = ZoneInfo(settings.app_timezone)
