@@ -257,7 +257,7 @@ def cli_db_stamp(
     """Mark the database with the given revision without running migrations."""
     cfg = AlembicConfig("alembic.ini")
     alembic_command.stamp(cfg, revision)
-    console.print(f"[green]Database stamped at {revision}")
+    console.print(f"[green]Database stamped at {revision}[/green]")
 
 
 @app.command("db-export")
