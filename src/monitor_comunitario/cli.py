@@ -15,9 +15,13 @@ from monitor_comunitario.scraper.parser import extract_relevant_outage_section
 from monitor_comunitario.services.matching import run_matching_cycle
 from monitor_comunitario.services.monitoring import run_monitoring_cycle
 
+# imports for database management
+from alembic.config import Config as AlembicConfig  # type: ignore
+from alembic import command as alembic_command  # type: ignore
+from monitor_comunitario.db.management import export_data, import_data, seed_demo
+
 app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
 console = Console()
-
 
 @app.command()
 def doctor() -> None:
@@ -28,7 +32,6 @@ def doctor() -> None:
     console.print(f"Timezone: {settings.app_timezone}")
     console.print(f"Celesc URL: {settings.celesc_outages_url}")
     console.print(f"Notification provider: {settings.notification_provider}")
-
 
 @app.command()
 def scrape() -> None:
@@ -61,7 +64,6 @@ def scrape() -> None:
         console.print("")
         console.print("[bold]Text preview[/bold]")
         console.print(preview)
-
 
 @app.command("scrape-municipalities")
 def scrape_municipalities(
@@ -101,7 +103,6 @@ def scrape_municipalities(
         for option in result.options[:10]:
             console.print(f"- {option.label} ({option.value})")
 
-
 @app.command()
 def run_once(
     limit: int = typer.Option(
@@ -132,7 +133,6 @@ def run_once(
     if run.error_message:
         console.print(f"[red]Error: {run.error_message}[/red]")
 
-
 @app.command("match-notices")
 def match_notices() -> None:
     """Match existing users against persisted notices and create notifications."""
@@ -146,7 +146,6 @@ def match_notices() -> None:
     console.print(f"Notices checked: {summary.notices_checked}")
     console.print(f"Matches created: {summary.matches_created}")
     console.print(f"Notifications created: {summary.notifications_created}")
-
 
 @app.command()
 def worker() -> None:
@@ -173,12 +172,10 @@ def worker() -> None:
 
     console.print("[bold green]Worker started[/bold green]")
     console.print(
-        f"Scheduled daily at {settings.scheduler_hour:02d}:"
-        f"{settings.scheduler_minute:02d} {settings.app_timezone}"
+        f"Scheduled daily at {settings.scheduler_hour:02d}:{settings.scheduler_minute:02d} {settings.app_timezone}"
     )
 
     scheduler.start()
-
 
 @app.command()
 def snapshots() -> None:
@@ -194,6 +191,86 @@ def snapshots() -> None:
         if file.is_file():
             console.print(str(file))
 
+# Database management commands
+
+@app.command("db-upgrade")
+def cli_db_upgrade(
+    revision: str = typer.Argument("head"),
+) -> None:
+    """Apply Alembic migrations up to the specified revision (default: head)."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.upgrade(cfg, revision)
+    console.print(f"[green]Migrations applied up to {revision}[/green]")
+
+@app.command("db-downgrade")
+def cli_db_downgrade(
+    revision: str = typer.Argument("base"),
+) -> None:
+    """Downgrade Alembic migrations down to the specified revision (default: base)."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.downgrade(cfg, revision)
+    console.print(f"[green]Migrations downgraded to {revision}[/green]")
+
+@app.command("db-current")
+def cli_db_current() -> None:
+    """Show the current Alembic revision."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.current(cfg)
+
+@app.command("db-history")
+def cli_db_history() -> None:
+    """Show the Alembic revision history."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.history(cfg)
+
+@app.command("db-revision")
+def cli_db_revision(
+    message: str = typer.Option(
+        ..., "--message", "-m", help="Migration message"
+    ),
+    autogenerate: bool = typer.Option(
+        False, "--autogenerate", help="Autogenerate migration from models"
+    ),
+) -> None:
+    """Create a new Alembic migration."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.revision(cfg, message=message, autogenerate=autogenerate)
+    console.print(f"[green]New migration created: {message}[/green]")
+
+@app.command("db-stamp")
+def cli_db_stamp(
+    revision: str = typer.Argument("head"),
+) -> None:
+    """Mark the database with the given revision without running migrations."""
+    cfg = AlembicConfig("alembic.ini")
+    alembic_command.stamp(cfg, revision)
+    console.print(f"[green]Database stamped at {revision}[/green]")
+
+@app.command("db-export")
+def cli_db_export(
+    output: Path = typer.Option(..., "--output", "-o", help="Output JSON file"),
+) -> None:
+    """Export database tables to a JSON file."""
+    export_data(str(output))
+    console.print(f"[green]Data exported to {output}[/green]")
+
+@app.command("db-import")
+def cli_db_import(
+    input: Path = typer.Option(..., "--input", "-i", help="Input JSON file"),
+) -> None:
+    """Import data from a JSON file into the database."""
+    import_data(str(input))
+    console.print(f"[green]Data imported from {input}[/green]")
+
+@app.command("db-seed-demo")
+def cli_db_seed_demo() -> None:
+    """Seed the database with fake data for demonstrations."""
+    # Ensure tables exist only for SQLite development
+    settings = get_settings()
+    if settings.database_url.startswith("sqlite"):
+        init_db()
+    seed_demo()
+    console.print("[green]Demo data seeded successfully[/green]")
 
 if __name__ == "__main__":
     app()
