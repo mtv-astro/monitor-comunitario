@@ -26,7 +26,12 @@ def upgrade() -> None:
         sa.Column('street', sa.String(length=200), nullable=False, server_default=''),
         sa.Column('number', sa.String(length=40), nullable=False, server_default=''),
         sa.Column('zipcode', sa.String(length=20), nullable=False, server_default=''),
-        sa.Column('accept_municipality_wide_alerts', sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column(
+            'accept_municipality_wide_alerts',
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        ),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -45,8 +50,17 @@ def upgrade() -> None:
         sa.Column('content_hash', sa.String(length=128), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index(op.f('ix_outage_notices_municipality'), 'outage_notices', ['municipality'], unique=False)
-    op.create_unique_constraint('uq_outage_notices_content_hash', 'outage_notices', ['content_hash'])
+    op.create_index(
+        op.f('ix_outage_notices_municipality'),
+        'outage_notices',
+        ['municipality'],
+        unique=False,
+    )
+    op.create_unique_constraint(
+        'uq_outage_notices_content_hash',
+        'outage_notices',
+        ['content_hash'],
+    )
 
     op.create_table(
         'monitoring_runs',
@@ -55,7 +69,12 @@ def upgrade() -> None:
         sa.Column('finished_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('status', sa.String(length=40), nullable=False, server_default='running'),
         sa.Column('municipalities_found', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('municipalities_captured', sa.Integer(), nullable=False, server_default='0'),
+        sa.Column(
+            'municipalities_captured',
+            sa.Integer(),
+            nullable=False,
+            server_default='0',
+        ),
         sa.Column('notices_found', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('notices_persisted', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('notices_created', sa.Integer(), nullable=False, server_default='0'),
@@ -63,7 +82,12 @@ def upgrade() -> None:
         sa.Column('matches_created', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('notifications_created', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('error_message', sa.Text(), nullable=False, server_default=''),
-        sa.Column('raw_snapshot_path', sa.String(length=500), nullable=False, server_default=''),
+        sa.Column(
+            'raw_snapshot_path',
+            sa.String(length=500),
+            nullable=False,
+            server_default='',
+        ),
     )
 
     op.create_table(
@@ -77,7 +101,11 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id']),
         sa.ForeignKeyConstraint(['outage_notice_id'], ['outage_notices.id']),
-        sa.UniqueConstraint('user_id', 'outage_notice_id', name='uq_user_outage_match_user_notice')
+        sa.UniqueConstraint(
+            'user_id',
+            'outage_notice_id',
+            name='uq_user_outage_match_user_notice',
+        ),
     )
 
     op.create_table(
@@ -95,7 +123,12 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['user_id'], ['users.id']),
         sa.ForeignKeyConstraint(['outage_notice_id'], ['outage_notices.id']),
-        sa.UniqueConstraint('user_id', 'outage_notice_id', 'channel', name='uq_notification_user_notice_channel')
+        sa.UniqueConstraint(
+            'user_id',
+            'outage_notice_id',
+            'channel',
+            name='uq_notification_user_notice_channel',
+        ),
     )
 
 def downgrade() -> None:
