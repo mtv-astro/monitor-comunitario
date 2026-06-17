@@ -1,8 +1,13 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, status
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from monitor_comunitario.api.routes_admin import router as admin_router
 from monitor_comunitario.api.routes_notifications import router as notifications_router
@@ -12,8 +17,11 @@ from monitor_comunitario.api.routes_web import STATIC_DIR
 from monitor_comunitario.api.routes_web import router as web_router
 from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
+from monitor_comunitario.db.session import get_session
+from monitor_comunitario.schemas.diagnostics import ReadinessRead
 
 settings = get_settings()
+SessionDep = Annotated[Session, Depends(get_session)]
 
 
 @asynccontextmanager
@@ -47,3 +55,17 @@ def healthcheck() -> dict[str, str]:
         "environment": settings.app_env,
         "timezone": settings.app_timezone,
     }
+
+
+@app.get("/ready", response_model=ReadinessRead)
+def readiness_check(session: SessionDep) -> ReadinessRead | JSONResponse:
+    """Return readiness status by validating database connectivity."""
+    try:
+        session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready", "database": "error"},
+        )
+
+    return ReadinessRead(status="ready", database="ok")
