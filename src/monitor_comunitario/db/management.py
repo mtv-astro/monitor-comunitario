@@ -5,14 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.orm import Session
-
 from .models import (
-    User,
-    OutageNotice,
-    UserOutageMatch,
-    Notification,
     MonitoringRun,
+    Notification,
+    OutageNotice,
+    User,
+    UserOutageMatch,
 )
 from .session import SessionLocal
 
@@ -35,10 +33,18 @@ def export_data(output_path: str) -> None:
     with SessionLocal() as session:
         result = {
             "users": [_serialize(obj) for obj in session.query(User).all()],
-            "outage_notices": [_serialize(obj) for obj in session.query(OutageNotice).all()],
-            "user_outage_matches": [_serialize(obj) for obj in session.query(UserOutageMatch).all()],
-            "notifications": [_serialize(obj) for obj in session.query(Notification).all()],
-            "monitoring_runs": [_serialize(obj) for obj in session.query(MonitoringRun).all()],
+            "outage_notices": [
+                _serialize(obj) for obj in session.query(OutageNotice).all()
+            ],
+            "user_outage_matches": [
+                _serialize(obj) for obj in session.query(UserOutageMatch).all()
+            ],
+            "notifications": [
+                _serialize(obj) for obj in session.query(Notification).all()
+            ],
+            "monitoring_runs": [
+                _serialize(obj) for obj in session.query(MonitoringRun).all()
+            ],
         }
     with path.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
@@ -58,16 +64,24 @@ def import_data(input_path: str) -> None:
             obj = User(**{k: v for k, v in item.items()})  # type: ignore[arg-type]
             session.merge(obj)
         for item in payload.get("outage_notices", []):
-            obj = OutageNotice(**{k: v for k, v in item.items()})  # type: ignore[arg-type]
+            obj = OutageNotice(
+                **{k: v for k, v in item.items()}
+            )  # type: ignore[arg-type]
             session.merge(obj)
         for item in payload.get("user_outage_matches", []):
-            obj = UserOutageMatch(**{k: v for k, v in item.items()})  # type: ignore[arg-type]
+            obj = UserOutageMatch(
+                **{k: v for k, v in item.items()}
+            )  # type: ignore[arg-type]
             session.merge(obj)
         for item in payload.get("notifications", []):
-            obj = Notification(**{k: v for k, v in item.items()})  # type: ignore[arg-type]
+            obj = Notification(
+                **{k: v for k, v in item.items()}
+            )  # type: ignore[arg-type]
             session.merge(obj)
         for item in payload.get("monitoring_runs", []):
-            obj = MonitoringRun(**{k: v for k, v in item.items()})  # type: ignore[arg-type]
+            obj = MonitoringRun(
+                **{k: v for k, v in item.items()}
+            )  # type: ignore[arg-type]
             session.merge(obj)
         session.commit()
 
