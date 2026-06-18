@@ -37,3 +37,7 @@ class UserRead(UserBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class UserCreatedRead(UserRead):
+    access_code: str

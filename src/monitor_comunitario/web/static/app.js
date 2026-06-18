@@ -1,4 +1,4 @@
-const form = document.querySelector("#registration-form");
+﻿const form = document.querySelector("#registration-form");
 const formStatus = document.querySelector("#form-status");
 const storedUserText = document.querySelector("#stored-user-text");
 const lookupInput = document.querySelector("#lookup-user-id");
@@ -420,8 +420,15 @@ form.addEventListener("submit", async (event) => {
 
   try {
     const user = await createUser(payload);
-    setStoredUser(user);
-    setStatus(`Cadastro salvo com sucesso. Seu ID é #${user.id}.`);
+    const { access_code: accessCode, ...storedUser } = user;
+
+    setStoredUser(storedUser);
+
+    const accessCodeMessage = accessCode
+      ? ` Guarde seu código privado: ${accessCode}. Depois acesse /member com telefone + código.`
+      : "";
+
+    setStatus(`Cadastro salvo com sucesso. Seu ID é #${user.id}.${accessCodeMessage}`);
     await loadNotifications(user.id);
   } catch (error) {
     setStatus(error.message, true);
@@ -466,3 +473,4 @@ async function boot() {
 }
 
 boot();
+

@@ -1,4 +1,4 @@
-﻿from datetime import UTC, datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from monitor_comunitario.db.models import User
 from monitor_comunitario.db.session import get_session
-from monitor_comunitario.schemas.users import UserCreate, UserRead, UserUpdate
+from monitor_comunitario.schemas.users import UserCreate, UserCreatedRead, UserRead, UserUpdate
+from monitor_comunitario.services.member_access import generate_access_code, hash_access_code
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -19,17 +20,27 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserCreatedRead, status_code=status.HTTP_201_CREATED)
 def create_user(
     payload: UserCreate,
     session: SessionDep,
-) -> User:
-    """Create a monitored user/address record."""
-    user = User(**payload.model_dump())
+) -> UserCreatedRead:
+    """Create a monitored user/address record and return a one-time access code."""
+    access_code = generate_access_code()
+    user = User(
+        **payload.model_dump(),
+        access_code_hash=hash_access_code(access_code),
+        access_code_created_at=utc_now(),
+    )
+
     session.add(user)
     session.commit()
     session.refresh(user)
-    return user
+
+    return UserCreatedRead(
+        **UserRead.model_validate(user).model_dump(),
+        access_code=access_code,
+    )
 
 
 @router.get("", response_model=list[UserRead])
