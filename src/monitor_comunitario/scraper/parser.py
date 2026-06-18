@@ -15,7 +15,7 @@ class ParsedOutageNotice:
 
 _NOISE_PREFIXES = (
     "Usamos apenas os cookies",
-    "Clique aqui para conhecer nossa Política de Privacidade",
+    "Clique aqui para conhecer nossa Pol?tica de Privacidade",
 )
 
 _NOISE_LINES = {
@@ -40,17 +40,22 @@ _NON_NOTICE_UPPERCASE_LINES = {
 }
 
 _NOTICE_HINT_PATTERN = re.compile(
-    r"\b(data|hor[aá]rio|bairro|rua|avenida|servid[aã]o|rodovia|desligamento)\b",
+    r"\b(data|hor[a?]rio|bairro|rua|avenida|servid[a?]o|rodovia|desligamento)\b",
+    re.IGNORECASE,
+)
+
+_MUNICIPALITY_LINE_PATTERN = re.compile(
+    r"\bMunic\S*pio\s+de\s*-\s*(?P<value>[^\n\r]+)",
     re.IGNORECASE,
 )
 
 _FIELD_PATTERNS = {
     "neighborhood": re.compile(r"\bBairro\s*:\s*(?P<value>.+)", re.IGNORECASE),
     "street": re.compile(
-        r"\b(?:Rua|R\.|Avenida|Av\.|Servid[aã]o|Rodovia)\s*:\s*(?P<value>.+)",
+        r"\b(?:Rua|R\.|Avenida|Av\.|Servid[a?]o|Rodovia)\s*:\s*(?P<value>.+)",
         re.IGNORECASE,
     ),
-    "description": re.compile(r"\b(?:Motivo|Descri[cç][aã]o)\s*:\s*(?P<value>.+)", re.IGNORECASE),
+    "description": re.compile(r"\b(?:Motivo|Descri[c?][a?]o)\s*:\s*(?P<value>.+)", re.IGNORECASE),
 }
 
 
@@ -89,8 +94,8 @@ def extract_relevant_outage_section(text: str) -> str:
 
     start_markers = [
         "Avisos de Desligamentos",
-        "Interrupções Programadas de Energia",
-        "O que é um desligamento programado?",
+        "Interrup??es Programadas de Energia",
+        "O que ? um desligamento programado?",
     ]
 
     marker_indexes = [cleaned.find(marker) for marker in start_markers if cleaned.find(marker) >= 0]
@@ -141,12 +146,23 @@ def _extract_field(block_text: str, field: str) -> str:
     return match.group("value").strip()
 
 
+def _extract_notice_municipality(block_text: str) -> str:
+    """Extract the municipality explicitly printed inside a Celesc notice block."""
+    match = _MUNICIPALITY_LINE_PATTERN.search(block_text)
+
+    if not match:
+        return ""
+
+    return match.group("value").strip()
+
+
 def _build_notice_from_block(municipality: str, block: list[str]) -> ParsedOutageNotice:
     block_text = "\n".join(block).strip()
     description = _extract_field(block_text, "description") or block_text
+    notice_municipality = _extract_notice_municipality(block_text) or municipality.strip()
 
     return ParsedOutageNotice(
-        municipality=municipality.strip(),
+        municipality=notice_municipality,
         neighborhood=_extract_field(block_text, "neighborhood"),
         street=_extract_field(block_text, "street"),
         description=description,
@@ -163,6 +179,9 @@ def parse_outage_notices_from_text(
     The parser supports two modes:
     1. municipality headings in the text;
     2. a fallback municipality supplied by the selector capture.
+
+    When Celesc prints an explicit "Munic?pio de - ..." line inside the
+    notice, that value is preferred over headings/dropdown fallback text.
     """
     section = extract_relevant_outage_section(text)
     lines = [line.strip() for line in section.splitlines() if line.strip()]
