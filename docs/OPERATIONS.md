@@ -48,7 +48,7 @@ If the database is unavailable, the endpoint returns `503 Service Unavailable`:
 
 ## Protected admin endpoints
 
-All `/admin/*` endpoints require the `X-Admin-API-Key` header.
+All `/admin/*` API endpoints require the `X-Admin-API-Key` header.
 
 ```http
 X-Admin-API-Key: <strong-admin-api-key>
@@ -101,9 +101,40 @@ Lists recent monitoring runs.
 
 Triggers a synchronous manual monitoring cycle for MVP/admin usage.
 
-## Future admin dashboard
+## Admin diagnostics dashboard
 
-A future admin dashboard can use these endpoints to render:
+The project serves a simple internal admin dashboard at:
+
+```text
+/admin
+```
+
+The dashboard is intentionally not linked from the public homepage. It is meant
+for direct internal access by the operator.
+
+The page itself is public static HTML, but protected data requests still require
+`ADMIN_API_KEY`. The key is not hardcoded into JavaScript. The operator enters it
+manually in the browser, and the frontend stores it only in `sessionStorage` for
+the current browser session.
+
+The dashboard sends protected requests with:
+
+```http
+X-Admin-API-Key: <strong-admin-api-key>
+```
+
+The dashboard consumes:
+
+```text
+GET /health
+GET /ready
+GET /admin/diagnostics
+GET /admin/runs/latest
+GET /admin/runs?limit=10
+POST /admin/runs/manual
+```
+
+It renders:
 
 ```text
 API status
@@ -111,11 +142,32 @@ Database readiness
 Scheduler configuration
 Notification configuration
 Latest monitoring run status
-Latest counts for notices, matches and notifications
+Latest counts for notices, users, matches and notifications
 Manual run button
 Monitoring history table
 ```
 
-The admin frontend must not hardcode `ADMIN_API_KEY` into public JavaScript.
-For an MVP internal dashboard, the key can be entered by the operator and stored
-in `sessionStorage` for the browser session.
+### Local usage
+
+Start the API:
+
+```powershell
+uv run uvicorn monitor_comunitario.api.main:app --reload
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/admin
+```
+
+Set `ADMIN_API_KEY` in `.env` or in the process environment before using the
+protected dashboard actions.
+
+For local manual testing:
+
+```env
+ADMIN_API_KEY=change-me-local-admin-key
+```
+
+Do not commit real admin keys.

@@ -17,6 +17,18 @@ def home() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@router.get("/admin", include_in_schema=False)
+def admin_dashboard() -> FileResponse:
+    """Serve the internal admin diagnostics dashboard page."""
+    return FileResponse(STATIC_DIR / "admin.html")
+
+
+@router.get("/admin/", include_in_schema=False)
+def admin_dashboard_with_trailing_slash() -> FileResponse:
+    """Serve the internal admin diagnostics dashboard page."""
+    return FileResponse(STATIC_DIR / "admin.html")
+
+
 @router.get("/privacidade", include_in_schema=False)
 def privacy_policy() -> FileResponse:
     """Serve the privacy policy page."""
