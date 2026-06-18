@@ -32,7 +32,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(160))
-    phone: Mapped[str] = mapped_column(String(40))
+    phone: Mapped[str] = mapped_column(String(40), index=True)
     municipality: Mapped[str] = mapped_column(String(120))
     neighborhood: Mapped[str] = mapped_column(String(160), default="")
     street: Mapped[str] = mapped_column(String(200), default="")
@@ -40,6 +40,11 @@ class User(Base):
     zipcode: Mapped[str] = mapped_column(String(20), default="")
     accept_municipality_wide_alerts: Mapped[bool] = mapped_column(Boolean, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    access_code_hash: Mapped[str] = mapped_column(String(128), default="")
+    access_code_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

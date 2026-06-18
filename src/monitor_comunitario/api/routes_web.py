@@ -17,6 +17,18 @@ def home() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@router.get("/member", include_in_schema=False)
+def member_area() -> FileResponse:
+    """Serve the resident member access page."""
+    return FileResponse(STATIC_DIR / "member.html")
+
+
+@router.get("/member/", include_in_schema=False)
+def member_area_with_trailing_slash() -> FileResponse:
+    """Serve the resident member access page."""
+    return FileResponse(STATIC_DIR / "member.html")
+
+
 @router.get("/admin", include_in_schema=False)
 def admin_dashboard() -> FileResponse:
     """Serve the internal admin diagnostics dashboard page."""

@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from monitor_comunitario.api.routes_admin import router as admin_router
+from monitor_comunitario.api.routes_member import router as member_router
 from monitor_comunitario.api.routes_notifications import router as notifications_router
 from monitor_comunitario.api.routes_outage_notices import router as outage_notices_router
 from monitor_comunitario.api.routes_users import router as users_router
@@ -42,6 +43,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.include_router(web_router)
 app.include_router(users_router)
+app.include_router(member_router)
 app.include_router(outage_notices_router)
 app.include_router(notifications_router)
 app.include_router(admin_router)
