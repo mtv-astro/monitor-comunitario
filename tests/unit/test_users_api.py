@@ -4,16 +4,27 @@ import pytest
 from fastapi.testclient import TestClient
 
 from monitor_comunitario.api.main import app
+from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
+
+ADMIN_API_KEY = "test-admin-key"
 
 
 @pytest.fixture()
-def client() -> Generator[TestClient, None, None]:
+def client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
     """Create database tables and provide a FastAPI test client."""
+    monkeypatch.setenv("ADMIN_API_KEY", ADMIN_API_KEY)
+    get_settings.cache_clear()
     init_db()
 
     with TestClient(app) as test_client:
         yield test_client
+
+    get_settings.cache_clear()
+
+
+def admin_headers() -> dict[str, str]:
+    return {"X-Admin-API-Key": ADMIN_API_KEY}
 
 
 def test_create_and_get_user(client: TestClient) -> None:
@@ -39,10 +50,24 @@ def test_create_and_get_user(client: TestClient) -> None:
     assert created["municipality"] == payload["municipality"]
     assert created["is_active"] is True
 
-    get_response = client.get(f"/users/{created['id']}")
+    public_get_response = client.get(f"/users/{created['id']}")
 
-    assert get_response.status_code == 200
-    assert get_response.json()["id"] == created["id"]
+    assert public_get_response.status_code == 404
+
+    admin_get_response = client.get(
+        f"/admin/users/{created['id']}",
+        headers=admin_headers(),
+    )
+
+    assert admin_get_response.status_code == 200
+    assert admin_get_response.json()["id"] == created["id"]
+
+
+def test_admin_user_routes_require_api_key(client: TestClient) -> None:
+    list_response = client.get("/admin/users")
+
+    assert list_response.status_code == 401
+    assert list_response.json()["detail"] == "Invalid or missing admin API key."
 
 
 def test_update_user(client: TestClient) -> None:
@@ -57,14 +82,22 @@ def test_update_user(client: TestClient) -> None:
 
     user_id = create_response.json()["id"]
 
-    update_response = client.patch(
+    public_update_response = client.patch(
         f"/users/{user_id}",
         json={"neighborhood": "Kobrasol", "street": "Rua Koesa"},
     )
 
-    assert update_response.status_code == 200
-    assert update_response.json()["neighborhood"] == "Kobrasol"
-    assert update_response.json()["street"] == "Rua Koesa"
+    assert public_update_response.status_code == 404
+
+    admin_update_response = client.patch(
+        f"/admin/users/{user_id}",
+        headers=admin_headers(),
+        json={"neighborhood": "Kobrasol", "street": "Rua Koesa"},
+    )
+
+    assert admin_update_response.status_code == 200
+    assert admin_update_response.json()["neighborhood"] == "Kobrasol"
+    assert admin_update_response.json()["street"] == "Rua Koesa"
 
 
 def test_deactivate_user(client: TestClient) -> None:
@@ -79,7 +112,14 @@ def test_deactivate_user(client: TestClient) -> None:
 
     user_id = create_response.json()["id"]
 
-    delete_response = client.delete(f"/users/{user_id}")
+    public_delete_response = client.delete(f"/users/{user_id}")
 
-    assert delete_response.status_code == 200
-    assert delete_response.json()["is_active"] is False
+    assert public_delete_response.status_code == 404
+
+    admin_delete_response = client.delete(
+        f"/admin/users/{user_id}",
+        headers=admin_headers(),
+    )
+
+    assert admin_delete_response.status_code == 200
+    assert admin_delete_response.json()["is_active"] is False
