@@ -1,11 +1,14 @@
-from collections.abc import Generator
+﻿from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
 
 from monitor_comunitario.api.main import app
+from monitor_comunitario.core.config import get_settings
 from monitor_comunitario.db.init_db import init_db
 from monitor_comunitario.services.member_access import hash_access_code, verify_access_code
+
+ADMIN_API_KEY = "test-admin-key"
 
 
 def unique_phone(suffix: str) -> str:
@@ -13,11 +16,19 @@ def unique_phone(suffix: str) -> str:
 
 
 @pytest.fixture()
-def client() -> Generator[TestClient, None, None]:
+def client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
+    monkeypatch.setenv("ADMIN_API_KEY", ADMIN_API_KEY)
+    get_settings.cache_clear()
     init_db()
 
     with TestClient(app) as test_client:
         yield test_client
+
+    get_settings.cache_clear()
+
+
+def admin_headers() -> dict[str, str]:
+    return {"X-Admin-API-Key": ADMIN_API_KEY}
 
 
 def test_access_code_hash_verification() -> None:
@@ -47,11 +58,18 @@ def test_create_user_returns_one_time_access_code(client: TestClient) -> None:
     assert body["access_code"]
     assert "access_code_hash" not in body
 
-    read_response = client.get(f"/users/{body['id']}")
+    public_read_response = client.get(f"/users/{body['id']}")
 
-    assert read_response.status_code == 200
-    assert "access_code" not in read_response.json()
-    assert "access_code_hash" not in read_response.json()
+    assert public_read_response.status_code == 404
+
+    admin_read_response = client.get(
+        f"/admin/users/{body['id']}",
+        headers=admin_headers(),
+    )
+
+    assert admin_read_response.status_code == 200
+    assert "access_code" not in admin_read_response.json()
+    assert "access_code_hash" not in admin_read_response.json()
 
 
 def test_member_access_succeeds_with_phone_and_access_code(client: TestClient) -> None:

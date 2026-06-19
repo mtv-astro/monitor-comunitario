@@ -1,16 +1,22 @@
-from datetime import UTC, datetime
+﻿from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from monitor_comunitario.api.security import require_admin_api_key
 from monitor_comunitario.db.models import User
 from monitor_comunitario.db.session import get_session
 from monitor_comunitario.schemas.users import UserCreate, UserCreatedRead, UserRead, UserUpdate
 from monitor_comunitario.services.member_access import generate_access_code, hash_access_code
 
 router = APIRouter(prefix="/users", tags=["users"])
+admin_router = APIRouter(
+    prefix="/admin/users",
+    tags=["admin", "users"],
+    dependencies=[Depends(require_admin_api_key)],
+)
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -43,12 +49,12 @@ def create_user(
     )
 
 
-@router.get("", response_model=list[UserRead])
+@admin_router.get("", response_model=list[UserRead])
 def list_users(
     session: SessionDep,
     include_inactive: bool = False,
 ) -> list[User]:
-    """List registered users.
+    """List registered users for admin usage.
 
     Inactive users are hidden by default because they should not receive
     outage notifications.
@@ -61,12 +67,12 @@ def list_users(
     return list(session.scalars(query).all())
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@admin_router.get("/{user_id}", response_model=UserRead)
 def get_user(
     user_id: int,
     session: SessionDep,
 ) -> User:
-    """Return a single user by ID."""
+    """Return a single user by ID for admin usage."""
     user = session.get(User, user_id)
 
     if user is None:
@@ -78,13 +84,13 @@ def get_user(
     return user
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@admin_router.patch("/{user_id}", response_model=UserRead)
 def update_user(
     user_id: int,
     payload: UserUpdate,
     session: SessionDep,
 ) -> User:
-    """Update a user record partially."""
+    """Update a user record partially for admin usage."""
     user = session.get(User, user_id)
 
     if user is None:
@@ -107,12 +113,12 @@ def update_user(
     return user
 
 
-@router.delete("/{user_id}", response_model=UserRead)
+@admin_router.delete("/{user_id}", response_model=UserRead)
 def deactivate_user(
     user_id: int,
     session: SessionDep,
 ) -> User:
-    """Deactivate a user without deleting historical records."""
+    """Deactivate a user without deleting historical records for admin usage."""
     user = session.get(User, user_id)
 
     if user is None:
