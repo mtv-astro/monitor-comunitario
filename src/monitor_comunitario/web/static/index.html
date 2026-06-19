@@ -6,7 +6,7 @@
     <title>Monitor Comunitário Celesc</title>
     <meta
       name="description"
-      content="Cadastro comunitário para receber alertas de desligamentos programados da Celesc por município e endereço."
+      content="Cadastro comunitário para acompanhar alertas de desligamentos programados da Celesc por município e endereço."
     />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
@@ -36,12 +36,12 @@
           <p class="hero-copy">
             Cadastre seu município e endereço para acompanhar avisos públicos de desligamentos
             programados da Celesc. O monitor cruza os avisos coletados com sua região e exibe
-            possíveis alertas no painel.
+            possíveis alertas na área do morador.
           </p>
 
           <div class="hero-actions">
             <a class="button button-primary" href="#cadastro">Cadastrar agora</a>
-            <a class="button button-secondary" href="#como-funciona">Como funciona</a>
+            <a class="button button-secondary" href="/member">Acessar área do morador</a>
           </div>
 
           <p class="disclaimer">
@@ -66,19 +66,19 @@
         <article class="info-card">
           <span class="card-number">01</span>
           <h2>Cadastro simples</h2>
-          <p>Nome, telefone, município, bairro e rua. Sem login nesta primeira versão.</p>
+          <p>Nome, telefone, município, bairro e rua. Sem CPF, CNPJ ou unidade consumidora.</p>
         </article>
 
         <article class="info-card">
           <span class="card-number">02</span>
-          <h2>Monitoramento diário</h2>
-          <p>O worker consulta os avisos públicos e registra cada execução no histórico.</p>
+          <h2>Código privado</h2>
+          <p>Após o cadastro, guarde o código exibido uma única vez para acessar sua área.</p>
         </article>
 
         <article class="info-card">
           <span class="card-number">03</span>
-          <h2>Painel do morador</h2>
-          <p>O navegador salva o ID do cadastro e permite consultar os alertas criados.</p>
+          <h2>Área do morador</h2>
+          <p>Acesse seus dados e alertas usando telefone cadastrado + código privado.</p>
         </article>
       </section>
 
@@ -150,6 +150,7 @@
               />
               <span>Também quero receber alertas amplos do município quando bairro/rua não forem claros.</span>
             </label>
+
             <label class="checkbox checkbox-required">
               <input id="accept_legal_terms" name="accept_legal_terms" type="checkbox" required />
               <span>
@@ -161,6 +162,23 @@
             <button class="button button-primary" type="submit">Salvar cadastro</button>
 
             <p id="form-status" class="status-message" role="status"></p>
+
+            <div id="access-code-panel" class="access-code-panel" hidden>
+              <p class="eyebrow">Código privado</p>
+              <h3>Guarde este código para acessar seus alertas</h3>
+              <p>
+                Ele aparece apenas uma vez. Use junto com o telefone cadastrado para entrar na área do morador.
+              </p>
+
+              <div class="access-code-box">
+                <code id="access-code-value">—</code>
+                <button id="copy-access-code" class="button button-secondary" type="button">
+                  Copiar código
+                </button>
+              </div>
+
+              <a class="button button-primary" href="/member">Acessar área do morador</a>
+            </div>
           </form>
         </div>
 
@@ -177,23 +195,11 @@
           </div>
 
           <div class="mini-panel">
-            <h2>Meu painel</h2>
-            <p id="stored-user-text">Nenhum cadastro salvo neste navegador.</p>
-
-            <div class="lookup-row">
-              <input
-                id="lookup-user-id"
-                type="number"
-                min="1"
-                placeholder="ID do cadastro"
-                aria-label="ID do cadastro"
-              />
-              <button id="load-notifications" class="button button-secondary" type="button">
-                Buscar avisos
-              </button>
-            </div>
-
-            <div id="notifications-list" class="notifications-list" aria-live="polite"></div>
+            <h2>Já tenho cadastro</h2>
+            <p>
+              A consulta de alertas agora é feita pela área do morador, usando telefone cadastrado e código privado.
+            </p>
+            <a class="button button-secondary" href="/member">Entrar na área do morador</a>
           </div>
         </aside>
       </section>
@@ -219,7 +225,7 @@
           </li>
           <li>
             <strong>Notificação</strong>
-            <span>Alertas aparecem no painel e podem evoluir para WhatsApp depois.</span>
+            <span>Alertas aparecem na área do morador e podem evoluir para WhatsApp depois.</span>
           </li>
         </ol>
       </section>
@@ -267,7 +273,7 @@
         <div id="consent-preferences" class="consent-preferences" hidden>
           <label class="checkbox">
             <input type="checkbox" checked disabled />
-            <span>Necessários: cadastro, painel e preferências.</span>
+            <span>Necessários: cadastro, área do morador e preferências.</span>
           </label>
 
           <label class="checkbox">
@@ -298,4 +304,3 @@
     <script src="/static/app.js" defer></script>
   </body>
 </html>
-

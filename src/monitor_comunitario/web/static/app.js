@@ -1,9 +1,8 @@
 ﻿const form = document.querySelector("#registration-form");
 const formStatus = document.querySelector("#form-status");
-const storedUserText = document.querySelector("#stored-user-text");
-const lookupInput = document.querySelector("#lookup-user-id");
-const loadNotificationsButton = document.querySelector("#load-notifications");
-const notificationsList = document.querySelector("#notifications-list");
+const accessCodePanel = document.querySelector("#access-code-panel");
+const accessCodeValue = document.querySelector("#access-code-value");
+const copyAccessCodeButton = document.querySelector("#copy-access-code");
 
 const consentBanner = document.querySelector("#consent-banner");
 const consentBannerText = document.querySelector("#consent-banner-text");
@@ -16,8 +15,10 @@ const customizeConsentButton = document.querySelector("#customize-consent");
 const saveConsentButton = document.querySelector("#save-consent");
 const openConsentSettingsButton = document.querySelector("#open-consent-settings");
 
-const storedUserKey = "monitor-comunitario:user";
+const recentRegistrationKey = "monitor-comunitario:recent-registration";
 const consentKey = "monitor-comunitario:consent";
+
+let latestAccessCode = "";
 
 let publicConfig = {
   ads_enabled: false,
@@ -36,35 +37,16 @@ function setStatus(message, isError = false) {
   formStatus.classList.toggle("error", isError);
 }
 
-function setStoredUser(user) {
-  window.localStorage.setItem(storedUserKey, JSON.stringify(user));
-  renderStoredUser();
-}
+function setRecentRegistration(user) {
+  const storedUser = {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    municipality: user.municipality,
+    saved_at: new Date().toISOString(),
+  };
 
-function getStoredUser() {
-  const rawValue = window.localStorage.getItem(storedUserKey);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawValue);
-  } catch {
-    return null;
-  }
-}
-
-function renderStoredUser() {
-  const storedUser = getStoredUser();
-
-  if (!storedUser) {
-    storedUserText.textContent = "Nenhum cadastro salvo neste navegador.";
-    return;
-  }
-
-  storedUserText.textContent = `Cadastro #${storedUser.id} — ${storedUser.name}, ${storedUser.municipality}`;
-  lookupInput.value = storedUser.id;
+  window.localStorage.setItem(recentRegistrationKey, JSON.stringify(storedUser));
 }
 
 function formToPayload(formElement) {
@@ -100,46 +82,24 @@ async function createUser(payload) {
   return body;
 }
 
-function renderNotifications(notifications) {
-  notificationsList.innerHTML = "";
+function showAccessCodePanel(accessCode) {
+  latestAccessCode = accessCode || "";
+  accessCodeValue.textContent = latestAccessCode || "Código indisponível";
+  accessCodePanel.hidden = false;
+}
 
-  if (!notifications.length) {
-    const emptyState = document.createElement("div");
-    emptyState.className = "empty-state";
-    emptyState.textContent = "Nenhum alerta encontrado para este cadastro.";
-    notificationsList.appendChild(emptyState);
+async function copyAccessCode() {
+  if (!latestAccessCode) {
+    setStatus("Nenhum código disponível para copiar.", true);
     return;
   }
 
-  for (const notification of notifications) {
-    const card = document.createElement("article");
-    card.className = "notification-card";
-
-    const title = document.createElement("strong");
-    title.textContent = notification.title;
-
-    const date = document.createElement("small");
-    date.textContent = new Date(notification.created_at).toLocaleString("pt-BR");
-
-    const message = document.createElement("p");
-    message.textContent = notification.message;
-
-    card.append(title, date, message);
-    notificationsList.appendChild(card);
+  try {
+    await navigator.clipboard.writeText(latestAccessCode);
+    setStatus("Código copiado. Guarde-o em um local seguro.");
+  } catch {
+    setStatus(`Copie manualmente seu código: ${latestAccessCode}`);
   }
-}
-
-async function loadNotifications(userId) {
-  notificationsList.innerHTML = "<div class=\"empty-state\">Carregando avisos...</div>";
-
-  const response = await fetch(`/users/${userId}/notifications?limit=10`);
-  const body = await response.json();
-
-  if (!response.ok) {
-    throw new Error(body.detail || "Não foi possível buscar avisos.");
-  }
-
-  renderNotifications(body);
 }
 
 async function loadPublicConfig() {
@@ -232,6 +192,12 @@ function injectScript({ id, src, async = true, crossOrigin = null }) {
   document.head.appendChild(script);
 }
 
+function markAdSlots(message) {
+  document.querySelectorAll(".ad-status").forEach((element) => {
+    element.textContent = message;
+  });
+}
+
 function loadGoogleAnalytics(consent) {
   if (!publicConfig.analytics_enabled || !consent.analytics) {
     return;
@@ -253,12 +219,6 @@ function loadGoogleAnalytics(consent) {
 
   window.gtag("js", new Date());
   window.gtag("config", tagId);
-}
-
-function markAdSlots(message) {
-  document.querySelectorAll(".ad-status").forEach((element) => {
-    element.textContent = message;
-  });
 }
 
 function loadGoogleAdsense(consent) {
@@ -341,7 +301,7 @@ function showConsentBanner(force = false) {
     }
 
     consentBannerText.textContent =
-      "No momento, usamos apenas armazenamento local necessário para lembrar seu cadastro.";
+      "No momento, usamos apenas armazenamento local necessário para lembrar preferências.";
     consentPreferences.hidden = true;
     saveConsentButton.hidden = true;
     customizeConsentButton.hidden = true;
@@ -417,39 +377,25 @@ form.addEventListener("submit", async (event) => {
   }
 
   setStatus("Salvando cadastro...");
+  accessCodePanel.hidden = true;
 
   try {
     const user = await createUser(payload);
     const { access_code: accessCode, ...storedUser } = user;
 
-    setStoredUser(storedUser);
+    setRecentRegistration(storedUser);
+    showAccessCodePanel(accessCode);
 
-    const accessCodeMessage = accessCode
-      ? ` Guarde seu código privado: ${accessCode}. Depois acesse /member com telefone + código.`
-      : "";
-
-    setStatus(`Cadastro salvo com sucesso. Seu ID é #${user.id}.${accessCodeMessage}`);
-    await loadNotifications(user.id);
+    setStatus(
+      "Cadastro salvo. Copie seu código privado e use-o com seu telefone na área do morador.",
+    );
+    form.reset();
   } catch (error) {
     setStatus(error.message, true);
   }
 });
 
-loadNotificationsButton.addEventListener("click", async () => {
-  const userId = Number(lookupInput.value);
-
-  if (!userId) {
-    notificationsList.innerHTML = "<div class=\"empty-state\">Informe o ID do cadastro.</div>";
-    return;
-  }
-
-  try {
-    await loadNotifications(userId);
-  } catch (error) {
-    notificationsList.innerHTML = `<div class="empty-state">${error.message}</div>`;
-  }
-});
-
+copyAccessCodeButton?.addEventListener("click", copyAccessCode);
 acceptConsentButton?.addEventListener("click", acceptAllConsent);
 rejectConsentButton?.addEventListener("click", rejectOptionalConsent);
 customizeConsentButton?.addEventListener("click", customizeConsent);
@@ -459,18 +405,7 @@ openConsentSettingsButton?.addEventListener("click", () => showConsentBanner(tru
 async function boot() {
   setGoogleConsentDefaults();
   await loadPublicConfig();
-
-  renderStoredUser();
   showConsentBanner();
-
-  const storedUser = getStoredUser();
-
-  if (storedUser?.id) {
-    loadNotifications(storedUser.id).catch(() => {
-      notificationsList.innerHTML = "";
-    });
-  }
 }
 
 boot();
-
