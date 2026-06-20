@@ -1,4 +1,5 @@
-from pathlib import Path
+﻿from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
 import typer
@@ -15,20 +16,49 @@ from monitor_comunitario.scraper.parser import extract_relevant_outage_section
 from monitor_comunitario.services.matching import run_matching_cycle
 from monitor_comunitario.services.monitoring import run_monitoring_cycle
 
-app = typer.Typer(help="Monitor Comunitário Celesc development CLI.")
+app = typer.Typer(help="Monitor ComunitÃ¡rio Celesc development CLI.")
 console = Console()
+
+
+def mask_database_url(database_url: str) -> str:
+    """Mask credentials in a database URL before printing it."""
+    if not database_url:
+        return ""
+
+    parsed = urlsplit(database_url)
+
+    if not parsed.scheme or not parsed.netloc:
+        return database_url
+
+    if "@" not in parsed.netloc:
+        return database_url
+
+    credentials, host = parsed.netloc.rsplit("@", 1)
+    username = credentials.split(":", 1)[0]
+
+    masked_netloc = f"{username}:***@{host}" if username else f"***@{host}"
+
+    return urlunsplit(
+        (
+            parsed.scheme,
+            masked_netloc,
+            parsed.path,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
 
 
 @app.command()
 def doctor() -> None:
     """Print basic environment information."""
     settings = get_settings()
-    console.print("[bold green]Monitor Comunitário[/bold green]")
+    console.print("[bold green]Monitor ComunitÃ¡rio[/bold green]")
     console.print(f"Environment: {settings.app_env}")
     console.print(f"Timezone: {settings.app_timezone}")
     console.print(f"Celesc URL: {settings.celesc_outages_url}")
     console.print(f"Notification provider: {settings.notification_provider}")
-    console.print(f"Database URL: {settings.database_url}")
+    console.print(f"Database URL: {mask_database_url(settings.database_url)}")
 
 
 @app.command("db-upgrade")
@@ -263,3 +293,4 @@ def snapshots() -> None:
 
 if __name__ == "__main__":
     app()
+
