@@ -2,11 +2,9 @@
 
 ## Overview
 
-The project exposes a small set of operational endpoints for deployment checks,
-readiness checks, and protected admin diagnostics.
+The project exposes public pages, public registration, member access and protected admin endpoints.
 
-These endpoints are intentionally simple and frontend-friendly so they can later
-be consumed by an internal admin dashboard.
+Operational endpoints are intentionally simple and frontend-friendly so they can be consumed by the internal admin dashboard.
 
 ## Public endpoints
 
@@ -46,6 +44,22 @@ If the database is unavailable, the endpoint returns `503 Service Unavailable`:
 }
 ```
 
+### `GET /`
+
+Serves the public registration page.
+
+### `GET /member`
+
+Serves the resident member area.
+
+### `POST /users`
+
+Creates a public resident/address registration and returns a one-time private access code.
+
+### `POST /member/access`
+
+Allows a resident to access their member area with phone + private code.
+
 ## Protected admin endpoints
 
 All `/admin/*` API endpoints require the `X-Admin-API-Key` header.
@@ -60,9 +74,17 @@ The expected value is configured through:
 ADMIN_API_KEY=<strong-admin-api-key>
 ```
 
-### `GET /admin/diagnostics`
+### Diagnostics and runs
 
-Returns operational metadata for admin usage.
+```text
+GET  /admin/diagnostics
+GET  /admin/runs
+GET  /admin/runs/latest
+GET  /admin/runs/{run_id}
+POST /admin/runs/manual
+```
+
+`GET /admin/diagnostics` returns operational metadata for admin usage.
 
 Example response:
 
@@ -87,19 +109,28 @@ Example response:
 }
 ```
 
-When monitoring runs exist, `latest_run` contains the most recent run metrics.
+### User management
 
-### `GET /admin/runs/latest`
+```text
+GET    /admin/users
+GET    /admin/users/{user_id}
+PATCH  /admin/users/{user_id}
+DELETE /admin/users/{user_id}
+```
 
-Returns the most recent monitoring run or `null` if no run exists yet.
+These routes are protected because they expose or modify resident registration data.
 
-### `GET /admin/runs`
+Public numeric-ID access to users is intentionally not exposed. Residents should use `/member/access` with phone + private code.
 
-Lists recent monitoring runs.
+### Notification management
 
-### `POST /admin/runs/manual`
+```text
+GET    /admin/notifications
+GET    /admin/users/{user_id}/notifications
+PATCH  /admin/notifications/{notification_id}/read
+```
 
-Triggers a synchronous manual monitoring cycle for MVP/admin usage.
+These routes are protected because notifications can reveal a resident/address relationship with a public outage notice.
 
 ## Admin diagnostics dashboard
 
@@ -109,29 +140,14 @@ The project serves a simple internal admin dashboard at:
 /admin
 ```
 
-The dashboard is intentionally not linked from the public homepage. It is meant
-for direct internal access by the operator.
+The dashboard is intentionally not linked from the public homepage. It is meant for direct internal access by the operator.
 
-The page itself is public static HTML, but protected data requests still require
-`ADMIN_API_KEY`. The key is not hardcoded into JavaScript. The operator enters it
-manually in the browser, and the frontend stores it only in `sessionStorage` for
-the current browser session.
+The page itself is public static HTML, but protected data requests still require `ADMIN_API_KEY`. The key is not hardcoded into JavaScript. The operator enters it manually in the browser, and the frontend stores it only in `sessionStorage` for the current browser session.
 
 The dashboard sends protected requests with:
 
 ```http
 X-Admin-API-Key: <strong-admin-api-key>
-```
-
-The dashboard consumes:
-
-```text
-GET /health
-GET /ready
-GET /admin/diagnostics
-GET /admin/runs/latest
-GET /admin/runs?limit=10
-POST /admin/runs/manual
 ```
 
 It renders:
@@ -147,11 +163,12 @@ Manual run button
 Monitoring history table
 ```
 
-### Local usage
+## Local admin usage
 
-Start the API:
+Start the API with an admin key:
 
 ```powershell
+$env:ADMIN_API_KEY="change-me-local-admin-key"
 uv run uvicorn monitor_comunitario.api.main:app --reload
 ```
 
@@ -161,13 +178,6 @@ Open:
 http://127.0.0.1:8000/admin
 ```
 
-Set `ADMIN_API_KEY` in `.env` or in the process environment before using the
-protected dashboard actions.
-
-For local manual testing:
-
-```env
-ADMIN_API_KEY=change-me-local-admin-key
-```
+Use the configured key in the dashboard form.
 
 Do not commit real admin keys.
